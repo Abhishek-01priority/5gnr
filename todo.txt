@@ -1,0 +1,2 @@
+- Add all the pointer after mem allocation to a list so that when free() is called after IFFT, all the pointers in the list
+  can be freed one-by-one

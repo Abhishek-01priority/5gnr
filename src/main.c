@@ -3,8 +3,7 @@
 #include "common.h"
 #include "mem_alloc.h"
 #include "modulation.h"
-
-#define __DEBUG__
+#include "bit_and_symbol.h"
 
 int main() {
     /*
@@ -15,32 +14,21 @@ int main() {
      *   4) OFDM modulation
      *   5) Pre-FFT frequency and time correction
      *   6) CP removal
-     */
+    */
 
-    testmodel_t testmodel = NR_TM_FR1_TM32;
+    // Generating bits
+    bits_t* bits = mem_alloc(sizeof(bits_t));
+    memset(bits, 0, sizeof(bits_t));
+    bitgen(bits);
 
-    // Bits generation
-    //   Different bits for RNTI 0, 1, and 2
-    const char *fname = "data\\pdsch_rnti1_databits.bin";
-    size_t      num_bits = 0;
-    uint8_t    *rnti1_bits = read_bits_from_file(fname, &num_bits);
+    // Generating symbols
+    channelsym_t* channelsym = mem_alloc(sizeof(channelsym_t));
+    memset(channelsym, 0, sizeof(channelsym_t));
+    symbolgen(bits, channelsym);
 
-    // Symbol mapping
-    //   RNTI 1 -> 16-QAM, RNTI 0 -> QPSK, RNTI 2 -> QPSK
-    //   16-QAM => 4 bits per symbol
-    uint32_t   rnti1_numsymbols = (uint32_t)(num_bits >> 4);
-    complex_t *rnti1_symarry    = mem_alloc(sizeof(complex_t) * rnti1_numsymbols);
-
-    uint8_t nibble;
-    for (uint32_t s = 0; s < rnti1_numsymbols; s++) {
-        nibble = ((rnti1_bits[s * 4 + 0] << 3) | (rnti1_bits[s * 4 + 1] << 2) | (rnti1_bits[s * 4 + 2] << 1) | (rnti1_bits[s * 4 + 3] << 0));
-        complex_t *sym = &rnti1_symarry[s];
-        qammod_16(nibble, sym);
-    }
-
-#ifdef __DEBUG__
-    write_symbols_to_file("debug\\rnti1_qam16_constellation.bin", rnti1_symarry, rnti1_numsymbols);
-#endif
+    // Resource Element mapping metadata generation (should happen only once)
+    
+    
 
     return 0;
 }

@@ -12,3 +12,14 @@ void* mem_alloc(size_t size) {
     return ptr;
 
 }
+
+void mem_free(void *ptr) {
+
+    assert(ptr);
+    #ifdef __MALLOC__
+        free(ptr);
+    #else
+        #error "Not implemented yet"
+    #endif
+    ptr = NULL;
+}
