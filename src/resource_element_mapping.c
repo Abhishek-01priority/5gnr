@@ -12,6 +12,33 @@ static const uint16_t PDSCH_DATA_OFS[6] = {1, 3, 5, 7, 9, 11};
 static const uint16_t PDCCH_DATA_OFS[9] = {0,2,3,4,6,7,8,10,11};
 static const uint16_t PDCCH_DMRS_OFS[3] = {1,5,9};
 
+static inline int16_t sat16(int32_t x)
+{
+    if (x >  32767) return  32767;
+    if (x < -32768) return -32768;
+    return (int16_t)x;
+}
+
+/*  s  : Q8.8   (int16_t)         -128 .. +127.996
+ *  g  : Q16.16 (int32_t)       ~ -128 .. +127.999
+ *  out: Q8.8   (int16_t)
+ */
+static inline int16_t mulQ8_8_by_Q16_16(int16_t s, int32_t g)
+{
+    int64_t prod = (int64_t)s * g;          /* Q24.24 */
+
+    /* add ±½·2⁻¹⁶ = ±0x8000 for symmetric rounding */
+    prod += (prod >= 0) ? 0x8000LL : -0x8000LL;
+
+    prod >>= 16;                            /* back to Q8.8 */
+    return sat16((int32_t)prod);
+}
+
+static void apply_gain(complex_t *dst, complex_t *src, int32_t gain) {
+    dst->i = mulQ8_8_by_Q16_16(src->i, gain);
+    dst->q = mulQ8_8_by_Q16_16(src->q, gain);
+}
+
 uint32_t pdcchdataREidx, pdcchdmrsREidx, pdschdmrsREidx[3], pdschdataREidx[3]; // counters for RE
 
     /* -- NR-TM-FR1-TM3.2 -- 
@@ -168,6 +195,9 @@ void rem_metadata_gen(rem_metadata_t* rem_metadata, uint32_t nrb, nr_scs_khz_t s
     assert(tbl);
     rem_metadata->nfft = tbl->nfft;
 
+    rem_metadata->pdschparams.level_of_boosting = nrfr1tm32->level_of_boosting;
+    rem_metadata->pdschparams.level_of_deboosting = nrfr1tm32->level_of_deboosting;
+
     mem_free(nrfr1tm32);
 
 }
@@ -221,18 +251,38 @@ void resource_element_mapping(rem_metadata_t* rem_metadata, uint8_t symidx, comp
                 // iterate over REs
                 assert(pdschdataREidx[ue] < channelsym->pdsch[ue].data.n);
                 const uint16_t dst = dt->idx[re];
-                buf[dst] = channelsym->pdsch[ue].data.s[pdschdataREidx[ue]++];
+                if (ue == 0) {
+                    apply_gain( &buf[dst], 
+                                &channelsym->pdsch[ue].data.s[pdschdataREidx[ue]++], 
+                                rem_metadata->pdschparams.level_of_boosting);
+                } else if (ue == 1) {
+                    apply_gain( &buf[dst], 
+                                &channelsym->pdsch[ue].data.s[pdschdataREidx[ue]++], 
+                                rem_metadata->pdschparams.level_of_deboosting);
+                } else { /* do nothing for rnti 2 */ }
+
             }
         }
         else if ( ( rem_metadata->plan.pdsch_symmask_ue[ue] >> symidx) & 0x1) {
             // PDSCH-data only symbol
             const prb_vec_t *pv = &rem_metadata->pdschparams.pdsch_prbs_ue[ue][symidx];
-
+            int32_t gain;
             for (uint16_t prb = 0; prb < pv->n; prb++) {
                 // iterate over all allocated PRBs
                 const size_t base = (size_t)12 * pv->idx[prb];
                 complex_t *dst = &buf[base];
                 const complex_t *src = &channelsym->pdsch[ue].data.s[pdschdataREidx[ue]];
+                if (ue == 0) {
+                    gain = rem_metadata->pdschparams.level_of_boosting;
+                } else if (ue == 1) {
+                    gain =  rem_metadata->pdschparams.level_of_deboosting;
+                }
+                // iterate over each RE in that PRB to apply gain
+                for (size_t i = 0; i < (size_t)12; i++) {
+                    apply_gain( &buf[i + base],
+                                &channelsym->pdsch[ue].data.s[pdschdataREidx[ue]],
+                                gain);
+                }
                 memcpy(dst, src, sizeof(complex_t) * 12);
                 pdschdataREidx[ue] += 12;
             }

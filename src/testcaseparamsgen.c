@@ -5,6 +5,8 @@
 #include "numerical.h"
 #include "testcaseparamsgen.h"
 
+// https://in.mathworks.com/help/5g/ug/5g-nr-tm-waveform-generation.html
+
 #define NA (0) //TODO: move to main header
 #define BW_IDX (bw <= 50 ? bw/5-1 : bw/10+4)
 
@@ -25,21 +27,19 @@ static const int P[4][4] = {
     {145,       275,        16,             16},
 };
 
-static inline uint16_t u16_min(uint16_t a, uint16_t b) { return a < b ? a : b; }
-
-uint32_t fetch_nrbs(int scs/*in KHz*/, int bw /*in MHz*/) {
+uint32_t fetch_nrbs(nr_scs_khz_t scs, nr_bandwidth_t bw) {
 
     uint32_t nrb;
 
     switch(scs) {
-        case 15:
-            nrb = transmission_bandwidth_LUT[0][BW_IDX];
+        case NR_SCS_15:
+            nrb = transmission_bandwidth_LUT[0][bw];
             break;
-        case 30:
-            nrb = transmission_bandwidth_LUT[1][BW_IDX];
+        case NR_SCS_30:
+            nrb = transmission_bandwidth_LUT[1][bw];
             break;
-        case 60:
-            nrb = transmission_bandwidth_LUT[2][BW_IDX];
+        case NR_SCS_60:
+            nrb = transmission_bandwidth_LUT[2][bw];
             break;
         default:
             nrb = NA;
@@ -117,7 +117,7 @@ int NR_FR1_TM3_2(uint32_t nrb, NR_FR1_TM32_t* nrfr1tm32) {
     float x = 0.6;
     int level_of_deboosting = -3;
 
-    uint32_t nsizeBWP = nrb - 3, p;
+    int nsizeBWP = nrb - 3, p;
     if (nsizeBWP >= P[0][0] && nsizeBWP <= P[0][1]) { p = P[0][3]; }
     else if (nsizeBWP >= P[1][0] && nsizeBWP <= P[1][1]) { p = P[1][3]; }
     else if (nsizeBWP >= P[2][0] && nsizeBWP <= P[2][1]) {p = P[2][3]; }
@@ -133,7 +133,7 @@ int NR_FR1_TM3_2(uint32_t nrb, NR_FR1_TM32_t* nrfr1tm32) {
     uint16_t i = 2 * (nrbg - 2) + 1, j = 0;
     /* Locations of 16QAM RBGs which are deboosted */
     last_deboost_16qam_location = (nrb - 3 + 3%p) / p - 1;
-    uint32_t* deboosted_16qam_locs = mem_alloc(sizeof(uint32_t) * nrbg);
+    uint16_t* deboosted_16qam_locs = mem_alloc(sizeof(uint16_t) * nrbg);
     while ( i > 0 ) {
         deboosted_16qam_locs[j] = last_deboost_16qam_location - i;
         i = i - 2;
@@ -144,12 +144,13 @@ int NR_FR1_TM3_2(uint32_t nrb, NR_FR1_TM32_t* nrfr1tm32) {
 
     /*converting RBGs to PRBs*/
     uint64_t rnti1prbbitmap = 0;
-    nrfr1tm32->pdschprb[1].idx = rbgarray_to_prbarray(deboosted_16qam_locs, nrbg, nrb, p, &nrfr1tm32->pdschprb[1].n, &rnti1prbbitmap);
+    nrfr1tm32->pdschprb[1].idx = rbgarray_to_prbarray(deboosted_16qam_locs, 
+        nrbg, nrb, p, &nrfr1tm32->pdschprb[1].n, &rnti1prbbitmap);
     // the rbgs are of no use now and can be freed
     mem_free(deboosted_16qam_locs);
     assert(nrfr1tm32->pdschprb[1].n < 64); // added this because rnti1prbbitmap is set to 64 bits for now
 
-    /**Boosted PDSCH PRBs for RNTI 0. All PRBs except the debboosted 16 QAM prbs are boosted QPSK prbs for RNTI 0.
+    /**Boosted PDSCH PRBs for RNTI 0. All PRBs except the deboosted 16 QAM prbs are boosted QPSK prbs for RNTI 0.
      * Iterate throught the list and find the PRBs that are not allocated to 16 QAM.
      * Also RNTI0 and RNTI1 allocation starts from NRB #3 */
     nrfr1tm32->pdschprb[0].n =  nrb - 3 - p * nrbg; // Table 4.9.2.2.7-1
@@ -168,10 +169,10 @@ int NR_FR1_TM3_2(uint32_t nrb, NR_FR1_TM32_t* nrfr1tm32) {
     }
 
     /* level of boosting in Q16.16 format */
-    int level_of_boosting = levelofboosting(nrb, p, nrbg);
+    uint32_t level_of_boosting = levelofboosting(nrb, p, nrbg);
 
-    nrfr1tm32->level_of_boosting = level_of_boosting;
-    nrfr1tm32->level_of_deboosting = level_of_deboosting;
+    nrfr1tm32->level_of_boosting = level_of_boosting; // rnti 0
+    nrfr1tm32->level_of_deboosting = level_of_deboosting; // rnti 1
 
     /* PDCCH */
     // assuming the pdcch allocations remains constant accross symbols, which is the case for NR-FR1-TM3.2

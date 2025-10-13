@@ -14,7 +14,7 @@ typedef struct {
 
 } NR_FR1_TM32_t;
 
-uint32_t fetch_nrbs(int scs/*in KHz*/, int bw /*in MHz*/);
+uint32_t fetch_nrbs(nr_scs_khz_t scs, nr_bandwidth_t bw);
 int NR_FR1_TM3_2(uint32_t nrb, NR_FR1_TM32_t* nrfr1tm32);
 
 /**
@@ -29,6 +29,6 @@ int NR_FR1_TM3_2(uint32_t nrb, NR_FR1_TM32_t* nrfr1tm32);
  */
 uint16_t * rbgarray_to_prbarray(const uint16_t *rbg, size_t nrbg,
                          uint16_t nrb, uint8_t P,
-                         size_t *out_n, size_t *prbbitmap);
+                         size_t *out_n, uint64_t *prbbitmap);
 
 #endif

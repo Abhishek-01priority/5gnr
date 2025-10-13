@@ -1,23 +1,24 @@
 # ---- Paths ----
 INCDIR   := inc
 SRCDIR   := src
+LIBDIR   := lib
 BINDIR   := bin
 DATADIR  := data
 BUILDDIR := build
 
 # ---- Output ----
-TARGET := $(BINDIR)\sim.exe
+TARGET := $(BINDIR)/sim
 
 # ---- Toolchain (override on the command line if needed) ----
-# e.g., make CC=clang
 CC      := gcc
-CFLAGS  ?= -O2 -Wall -Wextra -std=c11 -I$(INCDIR) -MMD -MP
+CFLAGS  ?= -O2 -Wall -Wextra -std=c11 -I$(INCDIR) -I$(LIBDIR) -MMD -MP -DFIXED_POINT=16 -DFRACBITS=8
 LDFLAGS ?=
 LDLIBS  ?=
 
 # ---- Source/Object discovery ----
-SRCS := $(wildcard $(SRCDIR)/*.c)
-OBJS := $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRCS))
+SRCS := $(wildcard $(SRCDIR)/*.c) $(LIBDIR)/kiss_fft.c
+OBJS := $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(filter $(SRCDIR)/%.c,$(SRCS))) \
+        $(patsubst $(LIBDIR)/%.c,$(BUILDDIR)/%.o,$(filter $(LIBDIR)/%.c,$(SRCS)))
 DEPS := $(OBJS:.o=.d)
 
 # ---- OS-specific shell helpers ----
@@ -44,6 +45,9 @@ $(TARGET): $(OBJS) | $(BINDIR)
 
 # ---- Compile ----
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILDDIR)/%.o: $(LIBDIR)/%.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # ---- Ensure output dirs exist ----

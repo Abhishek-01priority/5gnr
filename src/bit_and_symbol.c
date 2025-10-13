@@ -1,3 +1,6 @@
+#include "misc.h"
+#include "common.h"
+#include "mem_alloc.h"
 #include "bit_and_symbol.h"
 
 // #define __DEBUG__
@@ -13,10 +16,10 @@ static void perform_modulation(bitinfo_t* ch, modulationtype_t modulationtype, s
 
     assert(syminfo); assert(ch);
 
-    if (modulationtype = QPSK) {
+    if (modulationtype == QPSK) {
         syminfo->n = (uint16_t) (ch->numbits >> 2);
     }
-    else if(modulationtype = QAM16) {
+    else if(modulationtype == QAM16) {
         syminfo->n = (uint16_t) (ch->numbits >> 4);
     }
     syminfo->s = mem_alloc(sizeof(uint16_t) * syminfo->n); assert(syminfo->s);
@@ -45,17 +48,18 @@ static void perform_modulation(bitinfo_t* ch, modulationtype_t modulationtype, s
 void bitgen(bits_t * bits) {
 
     assert(bits);
+    char *fname;
 
-    const char *fname = "data\\pdsch_rnti0_databits.bin";
+    fname = "data\\pdsch_rnti0_databits.bin";
     bits->pdschrnti0.bits = read_bits_from_file(fname, &bits->pdschrnti0.numbits);
 
-    const char *fname = "data\\pdsch_rnti1_databits.bin";
+    fname = "data\\pdsch_rnti1_databits.bin";
     bits->pdschrnti1.bits = read_bits_from_file(fname, &bits->pdschrnti1.numbits);
 
-    const char *fname = "data\\pdsch_rnti2_databits.bin";
+    fname = "data\\pdsch_rnti2_databits.bin";
     bits->pdschrnti2.bits = read_bits_from_file(fname, &bits->pdschrnti2.numbits);
 
-    const char *fname = "data\\pdcch_databits.bin";
+    fname = "data\\pdcch_databits.bin";
     bits->pdcch.bits = read_bits_from_file(fname, &bits->pdcch.numbits);
 }
 
@@ -74,20 +78,21 @@ void symbolgen(bits_t* bits, channelsym_t *channelsym) {
     // PDSCH RNTI-2 Data
     perform_modulation(&bits->pdschrnti2, QPSK, &channelsym->pdsch[2].data);
 
+    char *fname;
     // PDCCH DMRS
-    const char *fname = "data\\pdcch_dmrssyms.bin";
+    fname = "data\\pdcch_dmrssyms.bin";
     read_symbols_from_file(fname, &channelsym->pdcch.control);
 
     // PDSCH RNTI-0 DMRS
-    const char *fname = "data\\pdsch_rnti0_dmrssyms.bin";
+    fname = "data\\pdsch_rnti0_dmrssyms.bin";
     read_symbols_from_file(fname, &channelsym->pdsch[0].control);
 
     // PDSCH RNTI-1 DMRS
-    const char *fname = "data\\pdsch_rnti1_dmrssyms.bin";
+    fname = "data\\pdsch_rnti1_dmrssyms.bin";
     read_symbols_from_file(fname, &channelsym->pdsch[1].control);
 
     // PDSCH RNTI-2 DMRS
-    const char *fname = "data\\pdsch_rnti2_dmrssyms.bin";
+    fname = "data\\pdsch_rnti2_dmrssyms.bin";
     read_symbols_from_file(fname, &channelsym->pdsch[2].control);
 
 }

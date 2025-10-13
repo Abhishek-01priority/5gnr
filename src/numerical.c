@@ -42,11 +42,11 @@ const uint32_t LUT[256] = {
 0xfa2f, 0xfaea, 0xfba5, 0xfc60, 0xfd1a, 0xfdd4, 0xfe8e, 0xff47
 };
 
-uint32_t fixed_mul(uint32_t op1, uint32_t op2) { return ((uint64_t)op1 * op2 >> Q);  /*convert to 64 bit to avoid overflow and right shift */}
+static uint32_t fixed_mul(uint32_t op1, uint32_t op2) { return ((uint64_t)op1 * op2 >> Q);  /*convert to 64 bit to avoid overflow and right shift */}
 // note: when doing multiplication typecast the first operand to 64 bit and then multiply. This causes the multiplication to of 64 bit
 // (uint64_t)(a * b) will typecast the result of a*b to 64 bits but by then higher bits are already lost.
 // same applies for div() function, typecast op1 before left shifting because op1 is already 32 bit.
-uint32_t fixed_div(uint32_t op1, uint32_t op2) { return ( ((uint64_t)op1 << Q) / op2 ); /*multiply numerator by 2^Q to ensure precision*/}
+static uint32_t fixed_div(uint32_t op1, uint32_t op2) { return ( ((uint64_t)op1 << Q) / op2 ); /*multiply numerator by 2^Q to ensure precision*/}
 
 // Portable CLZ fallback (use compiler builtin if you have it)
 static inline int clz_32(uint32_t x) {
@@ -61,7 +61,7 @@ static inline int clz_32(uint32_t x) {
 #endif
 }
 
-uint32_t logof2(uint32_t x) {
+static uint32_t logof2(uint32_t x) {
 
     // write `x` as m*2^n, so that log2(x) = n + log2(m). n is the integer part and log2(m) is the frac of log2(x).
     // To find `n`, count leading zeros of x. Since `x` is a fixed point number, the real number is x/2^16, so subtract 16 from clz()
@@ -102,7 +102,34 @@ uint32_t logof2(uint32_t x) {
 
 }
 
-int levelofboosting(uint32_t nrb, uint32_t P, uint32_t nrbg) {
+static uint32_t fixed_sqrt(uint32_t x_q)
+{
+    if (x_q == 0) return 0;
+
+    // Scale input to preserve Q-format: sqrt(x_q * 2^Q)
+    uint64_t op = ((uint64_t)x_q) << Q;
+
+    // Integer square root using restoring method (no float ops)
+    uint64_t res = 0;
+    uint64_t bit = 1ull << 62;      // Start with the highest even power of 2
+
+    while (bit > op)
+        bit >>= 2;
+
+    while (bit) {
+        if (op >= res + bit) {
+            op  -= res + bit;
+            res  = (res >> 1) + bit;
+        } else {
+            res >>= 1;
+        }
+        bit >>= 2;
+    }
+
+    return (uint32_t)res;   // Result is in Q16.16
+}
+
+int32_t levelofboosting(uint32_t nrb, uint32_t P, uint32_t nrbg) {
 
     const uint32_t ten_power_minus3_by_10 = (uint32_t)( (0.5011872336272722 * ONE_Q) + 0.5 );
     uint32_t ten_power_minus3_by_10_with_PNrbg = fixed_mul(ten_power_minus3_by_10, (P*nrbg) << Q);
@@ -110,12 +137,13 @@ int levelofboosting(uint32_t nrb, uint32_t P, uint32_t nrbg) {
     uint32_t numerator = (nrb_minus_three - ten_power_minus3_by_10_with_PNrbg);
     uint32_t denominator = (nrb_minus_three - ((P*nrbg) << Q) );
     uint32_t ratio_q = fixed_div(numerator, denominator);
+    uint32_t sqrt_of_ratio_q = fixed_sqrt(ratio_q);
 
     // 10*log10(x) = 10*log2(x) / log2(10) = TEN_DIVIDEDBY_LOG2OF10 * log2(x)
     uint32_t log_2 = logof2(ratio_q);
     uint32_t val = fixed_mul((uint32_t)( TEN_DIVIDEDBY_LOG2OF10 * ONE_Q + 0.5 ), log_2);
 
-    // printf("10log10(%0.6f) = %0.6f\n", (double)ratio_q/(double)ONE_Q, (double)val/(double)ONE_Q);
+    printf("10log10(%0.6f) = %0.6f\n", (double)ratio_q/(double)ONE_Q, (double)val/(double)ONE_Q);
 
-    return val;
+    return sqrt_of_ratio_q;
 }

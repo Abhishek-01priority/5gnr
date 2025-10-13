@@ -10,12 +10,6 @@
 
 typedef enum { DMRS_COMB_2 = 2, DMRS_COMB_3 = 3 } dmrs_comb_t;
 
-typedef struct {             
-    uint16_t *idx; // PRB indices
-    uint16_t  n;   // number of PRBs
-
-} prb_vec_t; // variable-length PRB list for a symbol
-
 typedef struct {
     uint16_t *idx; // RE indices
     uint16_t n;    // number of REs
@@ -42,6 +36,9 @@ typedef struct {
     prb_vec_t   pdsch_prbs_ue[3][14]; // PRB indices, for non-dmrs symbols only
     re_vec_t    pdschdmrsue[3][14]; // RE indices for PDSCH-dmrs. Used in symbols containing DMRS
     re_vec_t    pdschdataue[3][14]; // RE indices for PDSCH-data. Used in symbols containing DMRS
+
+    uint32_t    level_of_boosting;
+    int         level_of_deboosting;
 } pdsch_params_t;
 
 typedef struct {

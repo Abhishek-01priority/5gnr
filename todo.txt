@@ -1,2 +1,12 @@
 - Add all the pointer after mem allocation to a list so that when free() is called after IFFT, all the pointers in the list
   can be freed one-by-one
+
+
+NRBG = 6 -> number of 16 QAM RBGs for which EVM needs to be measured
+Number of QPSK PRBs within a slot for which EVM is not measured = Nrb - 3 - P * Nrbg
+								= 24 - 3 - 2 * 6
+								= 9
+This is number of PRBs after PRB#2. And only RNTI0 (which is u allocated after PRB#2) is QPSK
+Hence this is the number of PRBs for RNTI0
+
+This also means that number of PRBs for RNTI1 = 24 - 9 - 3 = 12

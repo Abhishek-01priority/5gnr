@@ -8,4 +8,4 @@ typedef struct {
     int ratio_pct;     // Ratio W / CP (%)
 } nr_evm_entry_t;
 
-const nr_evm_entry_t* nr_evm_lookup(nr_scs_khz_t scs, int bw_mhz);
+nr_evm_entry_t* nr_evm_lookup(nr_scs_khz_t scs, int bw_mhz);

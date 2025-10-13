@@ -5,7 +5,7 @@
 
 // ---- Table 6.5.3.5-2: FR1, 15 kHz SCS ----
 // cp_len applies to symbols 1–6 and 8–13 (symbols 0 & 7 have longer CP; lower percentage)
-static const nr_evm_entry_t EVM_FR1_15KHZ[] = {
+static nr_evm_entry_t EVM_FR1_15KHZ[] = {
     {  5,  512,  36,  14, 40 },
     { 10, 1024,  72,  28, 40 },
     { 15, 1536, 108,  44, 40 },
@@ -20,7 +20,7 @@ static const nr_evm_entry_t EVM_FR1_15KHZ[] = {
 
 // ---- Table 6.5.3.5-3: FR1, 30 kHz SCS ----
 // cp_len applies to symbols 1–13 (symbol 0 has longer CP; lower percentage)
-static const nr_evm_entry_t EVM_FR1_30KHZ[] = {
+static nr_evm_entry_t EVM_FR1_30KHZ[] = {
     {   5,  256,  18,   8, 40 },
     {  10,  512,  36,  14, 40 },
     {  15,  768,  54,  22, 40 },
@@ -40,7 +40,7 @@ static const nr_evm_entry_t EVM_FR1_30KHZ[] = {
 
 // ---- Table 6.5.3.5-4: FR1, 60 kHz SCS ----
 // cp_len applies to all OFDM symbols except symbol 0 of slot 0 & slot 2 (longer CP; lower percentage)
-static const nr_evm_entry_t EVM_FR1_60KHZ[] = {
+static nr_evm_entry_t EVM_FR1_60KHZ[] = {
     {  10,  256,  18,   8, 40 },
     {  15,  384,  27,  11, 40 },
     {  20,  512,  36,  14, 40 },
@@ -58,8 +58,8 @@ static const nr_evm_entry_t EVM_FR1_60KHZ[] = {
 };
 
 // Generic lookup
-const nr_evm_entry_t* nr_evm_lookup(nr_scs_khz_t scs, int bw_mhz) {
-    const nr_evm_entry_t *tbl = NULL;
+nr_evm_entry_t* nr_evm_lookup(nr_scs_khz_t scs, int bw_mhz) {
+    nr_evm_entry_t *tbl = NULL;
     size_t N = 0;
 
     switch (scs) {
@@ -72,7 +72,7 @@ const nr_evm_entry_t* nr_evm_lookup(nr_scs_khz_t scs, int bw_mhz) {
     return NULL; // not found
 }
 
-// Helper: Fs (Hz) = SCS (Hz) * Nfft
-static inline double nr_sampling_rate_hz(nr_scs_khz_t scs, int nfft) {
-    return (double)scs * 1e3 * (double)nfft;
-}
+// // Helper: Fs (Hz) = SCS (Hz) * Nfft
+// static inline double nr_sampling_rate_hz(nr_scs_khz_t scs, int nfft) {
+//     return (double)scs * 1e3 * (double)nfft;
+// }
